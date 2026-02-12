@@ -40,6 +40,9 @@
         (navigator.userAgent || navigator.vendor || window.opera).toLowerCase()
     );
 
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "rgba(51, 204, 255, 0.8)";
+
     var loaded = false;
 
     var init = function () {
@@ -53,7 +56,7 @@
         var height = (canvas.height = koef * innerHeight);
         var rand = Math.random;
 
-        ctx.fillStyle = "rgba(0,0,0,1)";
+        ctx.fillStyle = "rgba(0,0,0,.05)";
         ctx.fillRect(0, 0, width, height);
 
         var drawText = function () {
@@ -89,12 +92,28 @@
         var traceCount = mobile ? 20 : 50;
         var pointsOrigin = [];
         var dr = mobile ? 0.3 : 0.1;
-        for (var i = 0; i < Math.PI * 2; i += dr)
-            pointsOrigin.push(scaleAndTranslate(heartPosition(i), 310, 19, 0, 0));
-        for (var i = 0; i < Math.PI * 2; i += dr)
-            pointsOrigin.push(scaleAndTranslate(heartPosition(i), 250, 15, 0, 0));
-        for (var i = 0; i < Math.PI * 2; i += dr)
-            pointsOrigin.push(scaleAndTranslate(heartPosition(i), 190, 11, 0, 0));
+        // адаптивный размер сердца
+        var baseSize = Math.min(width, height) * 0.25; // меньше сердце
+        
+        var layers = [
+            [baseSize, baseSize * 0.06],
+            [baseSize * 0.8, baseSize * 0.05],
+            [baseSize * 0.6, baseSize * 0.04],
+        ];
+        
+        for (var l = 0; l < layers.length; l++) {
+            for (var i = 0; i < Math.PI * 2; i += dr) {
+                pointsOrigin.push(
+                    scaleAndTranslate(
+                        heartPosition(i),
+                        layers[l][0],
+                        layers[l][1],
+                        0,
+                        0
+                    )
+                );
+            }
+        }
 
         var heartPointsCount = pointsOrigin.length;
         var targetPoints = [];
@@ -103,7 +122,7 @@
             for (var i = 0; i < pointsOrigin.length; i++) {
                 targetPoints[i] = [
                     kx * pointsOrigin[i][0] + width / 2,
-                    ky * pointsOrigin[i][1] + height / 2.2,
+                    ky * pointsOrigin[i][1] + height / 2,
                 ];
             }
         };
