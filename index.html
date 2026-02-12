@@ -30,7 +30,6 @@ let width, height;
 let pointsOrigin = [];
 let targetPoints = [];
 let particles = [];
-let time = 0;
 
 const mobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i
 .test(navigator.userAgent.toLowerCase());
@@ -42,7 +41,11 @@ function resize() {
     width = canvas.width = window.innerWidth;
     height = canvas.height = window.innerHeight;
 }
-window.addEventListener("resize", resize);
+window.addEventListener("resize", () => {
+    resize();
+    createHeart();
+    createParticles();
+});
 resize();
 
 function heartPosition(rad) {
@@ -64,7 +67,6 @@ function scaleAndTranslate(pos, sx, sy, dx, dy) {
 function createHeart() {
     pointsOrigin = [];
     
-    // ❤️ Адаптивный уменьшенный размер
     const baseSize = Math.min(width, height) * 0.25;
 
     const layers = [
@@ -97,30 +99,63 @@ function createParticles() {
         particles.push({
             vx: 0,
             vy: 0,
-            speed: Math.random() + 5,
+            speed: Math.random() * 2 + 1.5, // медленнее движение
             q: Math.floor(Math.random() * pointsOrigin.length),
             D: 2 * (i % 2) - 1,
-            force: 0.7 + 0.2 * Math.random(),
+            force: 0.85, // мягче торможение
             trace: Array.from({ length: traceCount }, () => ({ x, y }))
         });
     }
 }
 
-function pulse(kx, ky) {
+function pulse(scale) {
     for (let i = 0; i < pointsOrigin.length; i++) {
         targetPoints[i] = [
-            kx * pointsOrigin[i][0] + width / 2,
-            ky * pointsOrigin[i][1] + height / 2
+            scale * pointsOrigin[i][0] + width / 2,
+            scale * pointsOrigin[i][1] + height / 2
         ];
     }
 }
 
-function loop() {
-    let n = -Math.cos(time);
-    pulse((1 + n) * 0.5, (1 + n) * 0.5);
-    time += 0.02;
+// --- новая плавная анимация с паузой ---
 
-    ctx.fillStyle = "rgba(0,0,0,0.08)";
+let phase = 0;        // 0 → растёт, 1 → пауза, 2 → уменьшается
+let scale = 0;
+let pauseTimer = 0;
+
+function updateScale() {
+    const growSpeed = 0.015;  // медленнее
+    const maxScale = 1;
+    const minScale = 0;
+
+    if (phase === 0) {
+        scale += growSpeed;
+        if (scale >= maxScale) {
+            scale = maxScale;
+            phase = 1;
+            pauseTimer = 60; // ~1 секунда при 60fps
+        }
+    } 
+    else if (phase === 1) {
+        pauseTimer--;
+        if (pauseTimer <= 0) {
+            phase = 2;
+        }
+    } 
+    else if (phase === 2) {
+        scale -= growSpeed;
+        if (scale <= minScale) {
+            scale = minScale;
+            phase = 0;
+        }
+    }
+}
+
+function loop() {
+    updateScale();
+    pulse(scale);
+
+    ctx.fillStyle = "rgba(0,0,0,0.06)";
     ctx.fillRect(0, 0, width, height);
 
     for (let i = particles.length; i--;) {
@@ -131,7 +166,7 @@ function loop() {
         let dy = p.trace[0].y - q[1];
         let length = Math.sqrt(dx * dx + dy * dy);
 
-        if (length < 10) {
+        if (length < 8) {
             p.q = (p.q + p.D + pointsOrigin.length) % pointsOrigin.length;
         }
 
@@ -148,11 +183,11 @@ function loop() {
         for (let k = 0; k < p.trace.length - 1; k++) {
             let T = p.trace[k];
             let N = p.trace[k + 1];
-            N.x -= 0.4 * (N.x - T.x);
-            N.y -= 0.4 * (N.y - T.y);
+            N.x -= 0.35 * (N.x - T.x);
+            N.y -= 0.35 * (N.y - T.y);
         }
 
-        ctx.fillStyle = "rgba(255, 80, 120, 0.7)";
+        ctx.fillStyle = "rgba(255, 90, 140, 0.8)";
         p.trace.forEach(t => ctx.fillRect(t.x, t.y, 1, 1));
     }
 
